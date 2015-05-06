@@ -10,7 +10,7 @@ Y = X / NAMEDCONST / VAR / STR / NUM
 VAR = ~r"[a-z][0-9]*"
 NAMEDCONST = ~r"[a-z]{2,}|[+-]" # aside from + and -, named constants must have at least 2 letters (to distinguish from variable names)
 STR = "\"" ~r"[^\"\s]([^\"\n\r]*[^\"\s])?" "\""	# quoted string literal. nonempty; may not start or end with whitespace
-CONCEPT = ~r"[A-Za-z][A-Za-z0-9-]*"
+CONCEPT = ~r"[A-Za-z0-9.'][A-Za-z0-9.'-]*"	# seen in data: :li (x3 / 3) and :quant (x / 355.02) and :mod (x / friggin')
 REL = ~r":[A-Za-z][A-Za-z0-9-]*"
 NUM = ~r"[+-]?\d+(\.\d+)?"
 # TODO: the regexes, especially NUM, need checking
