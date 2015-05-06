@@ -170,17 +170,20 @@ class AMR(DependencyGraph):
         
         self.nodes = defaultdict(lambda: {'address': None, 
                                           'type': None,
-                                          'label': None,
                                           'head': None,
                                           'rel': None,  
+                                          'word': None, 
                                           'deps': []})
         # Emulate the DependencyGraph (superclass) data structures somewhat.
         # There are some differences, e.g., in AMR it is possible for a node to have
         # multiple dependents with the same relation; so here, 'deps' is simply a list 
         # of dependents, not a mapping from relation types to dependents.
+        # In typical depenency graphs, 'word' is a word in the sentence 
+        # and 'address' is its index; here, both point to the object representing 
+        # the node's AMR variable, concept, or constant.
         
         TOP = Var('TOP')
-        self.nodes[TOP]['address'] = TOP
+        self.nodes[TOP]['address'] = self.nodes[TOP]['word'] = TOP
         self.nodes[TOP]['type'] = 'TOP'
         if anno:
             self._anno = anno
@@ -274,10 +277,10 @@ class AMR(DependencyGraph):
                 elif t=='CONCEPT':
                     assert v is not None
                     if v in v2c:
-                        raise AMRError('Variable has multiple concepts: '+str(v))
+                        raise AMRError('Variable has multiple concepts: '+str(v)+'\n'+self._anno)
                     c = intern_elt(Concept(ch.text))
                     v2c[v] = c
-                    self.add_node({'address': c, 'type': 'CONCEPT',
+                    self.add_node({'address': c, 'word': c, 'type': 'CONCEPT',
                                    'rel': ':instance-of', 'head': v, 'deps': []})
                     deps.append(c)
                     triples.append((v, ':instance-of', c))
@@ -307,7 +310,7 @@ class AMR(DependencyGraph):
                             n2 = intern_elt(AMRNumber(q.text))
                             consts.add(n2)
                         assert n2 is not None
-                        self.add_node({'address': n2, 'type': tq,
+                        self.add_node({'address': n2, 'word': n2, 'type': tq,
                                        'rel': rel, 'head': v})
                         self.nodes[n2]['deps'].extend(deps2)
                         deps.append(n2)
@@ -322,13 +325,13 @@ class AMR(DependencyGraph):
             if ch.expr_name=='X':
                 assert n is None    # only one top-level node per AMR
                 n, triples, deps = walk(ch)
-                self.add_node({'address': n, 'type': 'VAR', 
+                self.add_node({'address': n, 'word': n, 'type': 'VAR', 
                                'rel': ':top', 'head': intern_elt(Var('TOP'))})
                 self.nodes[n]['deps'].extend(deps)
                 triples = [(intern_elt(Var('TOP')), ':top', n)] + triples
     
         if allvars - set(v2c.keys()):
-            raise AMRError('Unbound variable(s): ' + ','.join(map(str,allvars - set(v2c.keys()))))
+            raise AMRError('Unbound variable(s): ' + ','.join(map(str,allvars - set(v2c.keys())))+'\n'+self._anno)
     
         # All is well, so store the resulting data
         self._v2c = v2c
