@@ -16,7 +16,7 @@ for ln in fileinput.input():
     try:
         a = AMR(ln)
         c.update(map(repr, a.nodes.keys()))    # vars, concepts, constants: count once per AMR
-        c.update('.'+repr(x) for _,r,x in a.triples() if r==':instance-of' and isinstance(x,Concept))  # concepts count once per variable
+        c.update('.'+repr(x) for _,r,x in a.triples(rel=':instance-of'))  # concepts count once per variable
         c.update(map((lambda x: x[1]), a.triples()))    # relations
         c.update('.'+repr(x) for _,_,x in a.triples() if isinstance(x,AMRConstant))  # constants count once per relation
     except AMRSyntaxError as ex:
