@@ -16,7 +16,7 @@ TODO: Include the smatch evaluation code
 from __future__ import print_function
 import os, sys, re, fileinput, json
 from pprint import pprint
-from collections import defaultdict, namedtuple, Counter
+from collections import defaultdict, namedtuple, Counter, Container
 
 from parsimonious.grammar import Grammar
 from nltk.parse import DependencyGraph
@@ -43,10 +43,13 @@ class Var(object):
         return hash(repr(self))
 
 class Concept(object):
+    RE_FRAME_NUM = re.compile(r'-\d\d$')
     def __init__(self, name):
         self._name = name
     def is_constant(self):
         return False
+    def is_frame(self):
+        return self.RE_FRAME_NUM.search(self._name) is not None
     def __repr__(self):
         return 'Concept('+self._name+')'
     def __str__(self):
@@ -61,6 +64,8 @@ class AMRConstant(object):
         self._value = value
     def is_constant(self):
         return True
+    def is_frame(self):
+        return False
     def __repr__(self):
         return 'Const('+self._value+')'
     def __str__(self):
@@ -192,12 +197,52 @@ class AMR(DependencyGraph):
                 raise AMRSyntaxError('Well-formedness error in annotation:\n'+anno.strip())
             self._analyze(p)
     
-    def triples(self):  # overrides superclass implementation
-        return self._triples
-                
+    def triples(self, head=None, rel=None, dep=None, normalize_inverses=False, normalize_mod=False):  # overrides superclass implementation
+        '''
+        Returns a list of head-relation-dependent triples in the AMR.
+        Can be filtered by specifying a value (or iterable of allowed values) for:
+          - 'head': head variable(s)
+          - 'rel': relation label(s) (string(s) starting with ":"), or "core" for all :ARGx roles, 
+            or "non-core" for all other relations
+          - 'dep': dependent variable(s)/concept(s)/constant(s)
+        Boolean options:
+          - 'normalize_inverses': transform (h,':REL-of',d) relations to (d,':REL',h)
+          - 'normalize_mod': transform ':mod' to ':domain-of' (before normalizing inverses, 
+            if applicable)
+            
+        >>> a = AMR('(h / hug-01 :ARG1 (p / person :ARG0-of h))')
+        >>> a.triples(head=Var('h'))
+        [(Var(h), ':instance-of', Concept(hug-01)), (Var(h), ':ARG1', Var(p))]
+        >>> a.triples(head=Var('p'), rel=':instance-of')
+        [(Var(p), ':instance-of', Concept(person))]
+        >>> a.triples(rel=[':top',':instance-of'])
+        [(Var(TOP), ':top', Var(h)), (Var(h), ':instance-of', Concept(hug-01)), (Var(p), ':instance-of', Concept(person))]
+        >>> a.triples(rel='core')
+        [(Var(h), ':ARG1', Var(p)), (Var(p), ':ARG0-of', Var(h))]
+        >>> a.triples(rel='core', normalize_inverses=True)
+        [(Var(h), ':ARG1', Var(p)), (Var(h), ':ARG0', Var(p))]
+        '''
+        tt = (trip for trip in self._triples)
+        if normalize_mod:
+            tt = ((h,':domain-of',d) if r==':mod' else (h,r,d) for h,r,d in tt)
+        if normalize_inverses:
+            tt = ((y,r[:-3],x) if r.endswith('-of') else (x,r,y) for x,r,y in tt)
+        if head:
+            tt = ((h,r,d) for h,r,d in tt if h in (head if hasattr(head,'__iter__') else (head,)))
+        if rel:
+            if rel=='core':
+                tt = ((h,r,d) for h,r,d in tt if r.startswith(':ARG'))
+            elif rel=='non-core':
+                tt = ((h,r,d) for h,r,d in tt if not r.startswith(':ARG'))
+            else:
+                tt = ((h,r,d) for h,r,d in tt if r in (rel if hasattr(rel,'__iter__') else (rel)))
+        if dep:
+            tt = ((h,r,d) for h,r,d in tt if d in (dep if hasattr(dep,'__iter__') else (dep,)))
+        return list(tt)
+    
     def constants(self):
         return self._constants
-        
+    
     def concept(self, variable):
         return self._v2c[variable]
     
