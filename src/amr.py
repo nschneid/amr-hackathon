@@ -166,7 +166,7 @@ class AMR(DependencyGraph):
         
         Will raise an AMRSyntaxError if notationally malformed, or an AMRError if 
         there is not a 1-to-1 mapping between (unique) variables and concepts.
-        Will not check details such as the appropriateness of relation (role) names 
+        Will not check details such as the appropriateness of relation/role names 
         or constants. Does not currently read or store metadata about the AMR.
         '''
         self._v2c = {}
@@ -203,7 +203,7 @@ class AMR(DependencyGraph):
         Can be filtered by specifying a value (or iterable of allowed values) for:
           - 'head': head variable(s)
           - 'rel': relation label(s) (string(s) starting with ":"), or "core" for all :ARGx roles, 
-            or "non-core" for all other relations
+            or "non-core" for all other relations. See also role_triples().
           - 'dep': dependent variable(s)/concept(s)/constant(s)
         Boolean options:
           - 'normalize_inverses': transform (h,':REL-of',d) relations to (d,':REL',h)
@@ -239,6 +239,19 @@ class AMR(DependencyGraph):
         if dep:
             tt = ((h,r,d) for h,r,d in tt if d in (dep if hasattr(dep,'__iter__') else (dep,)))
         return list(tt)
+    
+    def role_triples(self, **kwargs):
+        '''
+        Same as triples(), but limited to roles (excludes :instance-of, :instance, and :top relations).
+        
+        >>> a = AMR('(h / hug-01 :ARG1 (p / person :ARG0-of h))')
+        >>> a.role_triples()
+        [(Var(h), ':ARG1', Var(p)), (Var(p), ':ARG0-of', Var(h))]
+        >>> a.role_triples(head=Var('h'))
+        [(Var(h), ':ARG1', Var(p))]
+        '''
+        tt = [(h,r,d) for h,r,d in self.triples(**kwargs) if r not in (':instance',':instance-of',':top')]
+        return tt
     
     def constants(self):
         return self._constants
