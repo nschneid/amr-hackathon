@@ -7,6 +7,8 @@ and the AST is built by the Parsimonious library (https://github.com/erikrose/pa
 The resulting graph is represented with the AMR class.
 When called directly, this script runs some cursory unit tests.
 
+If the AMR has ISI-style inline alignments, those are stored in the AMR object as well.
+
 TODO: Include the smatch evaluation code 
 (released at http://amr.isi.edu/evaluation.html under the MIT License).
 
@@ -37,6 +39,8 @@ class Var(object):
         return 'Var('+self._name+')'
     def __str__(self):
         return self._name
+    def __call__(self, **kwargs):   # args are ignored, but this is present so Var objects behave like objects that can have alignments
+        return self.__str__()
     def __eq__(self, that):
         return type(that)==type(self) and self._name==that._name
     def __hash__(self):
@@ -52,8 +56,10 @@ class Concept(object):
         return self.RE_FRAME_NUM.search(self._name) is not None
     def __repr__(self):
         return 'Concept('+self._name+')'
-    def __str__(self):
-        return self._name
+    def __str__(self, align={}):
+        return self._name+align.get(self,'')
+    def __call__(self, **kwargs):
+        return self.__str__(**kwargs)
     def __eq__(self, that):
         return type(that)==type(self) and self._name==that._name
     def __hash__(self):
@@ -68,17 +74,20 @@ class AMRConstant(object):
         return False
     def __repr__(self):
         return 'Const('+self._value+')'
-    def __str__(self):
-        return self._value
+    def __str__(self, align={}):
+        return self._value+align.get(self,'')
+    def __call__(self, **kwargs):
+        return self.__str__(**kwargs)
     def __eq__(self, that):
         return type(that)==type(self) and self._value==that._value
     def __hash__(self):
         return hash(repr(self))
         
 class AMRString(AMRConstant):
+    def __str__(self, align={}):
+        return '"'+self._value+'"'+align.get(self,'')
     def __repr__(self):
         return '"'+self._value+'"'
-    __str__ = __repr__
 
 class AMRNumber(AMRConstant):
     def __repr__(self):
@@ -155,6 +164,47 @@ class AMR(DependencyGraph):
             :op3 "Wulfric"
             :op4 "Brian"
             :op5 "Dumbledore"))
+            
+    # with automatic alignments
+    # at_0 a_1 glance_2 i_3 can_4 distinguish_5 china_6 from_7 arizona_8 ._9
+    >>> a = AMR('(p / possible~e.4 :domain~e.1 (d / distinguish-01~e.5 :arg0 (i / i~e.3) \
+    :arg1 (c / country :wiki~e.7 "china"~e.6 :name (n / name :op1 "china"~e.6))          \
+    :arg2 (s / state :wiki~e.7 "arizona"~e.8 :name (n2 / name :op1 "arizona"~e.8))       \
+    :manner~e.0 (g / glance-01~e.2 :arg0 i)))')
+    >>> a
+    (p / possible~e.4
+        :domain~e.1 (d / distinguish-01~e.5
+            :arg0 (i / i~e.3)
+            :arg1 (c / country
+                :wiki~e.7 "china"~e.6
+                :name (n / name
+                    :op1 "china"~e.6))
+            :arg2 (s / state
+                :wiki~e.7 "arizona"~e.8
+                :name (n2 / name
+                    :op1 "arizona"~e.8))
+            :manner~e.0 (g / glance-01~e.2
+                :arg0 i)))
+    >>> a.alignments()  #doctest:+NORMALIZE_WHITESPACE
+    {(Var(d), ':manner', Var(g)): 'e.0', Concept(glance-01): 'e.2', 
+    "china": 'e.6', (Var(s), ':wiki', "arizona"): 'e.7', Concept(i): 'e.3', 
+    "arizona": 'e.8', (Var(p), ':domain', Var(d)): 'e.1', 
+    Concept(distinguish-01): 'e.5', Concept(possible): 'e.4', 
+    (Var(c), ':wiki', "china"): 'e.7'}
+    >>> print(a(alignments=False))
+    (p / possible
+        :domain (d / distinguish-01
+            :arg0 (i / i)
+            :arg1 (c / country
+                :wiki "china"
+                :name (n / name
+                    :op1 "china"))
+            :arg2 (s / state
+                :wiki "arizona"
+                :name (n2 / name
+                    :op1 "arizona"))
+            :manner (g / glance-01
+                :arg0 i)))
     '''
     
     def __init__(self, anno):
@@ -172,6 +222,7 @@ class AMR(DependencyGraph):
         self._v2c = {}
         self._triples = []
         self._constants = set()
+        self._alignments = {}
         
         self.nodes = defaultdict(lambda: {'address': None, 
                                           'type': None,
@@ -265,6 +316,9 @@ class AMR(DependencyGraph):
     def var2concept(self):
         return dict(self._v2c)
     
+    def alignments(self):
+        return dict(self._alignments)
+    
     def reentrancies(self):
         '''Counts the number of times each variable is mentioned in the annotation 
         beyond the one where it receives a concept. Non-reentrant variables are not 
@@ -280,38 +334,49 @@ class AMR(DependencyGraph):
     #def __repr__(self):
     #    return 'AMR(v2c='+repr(self._v2c)+', triples='+repr(self._triples)+', constants='+repr(self._constants)+')'
 
-    def __str__(self, compressed=False, indent=' '*4):
+    def __call__(self, **kwargs):
+        return self.__str__(**kwargs)
+
+    def __str__(self, alignments=True, compressed=False, indent=' '*4):
         '''Assumes triples are stored in a sensible order (reflecting how they are encountered in a valid AMR).'''
         s = ''
         stack = []
         instance_fulfilled = None
+        align = {k: '~'+v for k,v in self._alignments.items()} if alignments else {}
         for h, r, d in self.triples()+[(None,None,None)]:
             if r==':top':
                 s += '(' + str(d)
                 stack.append(d)
                 instance_fulfilled = False
             elif r==':instance-of':
-                s += ' / ' + str(d)
+                s += ' / ' + d(align=align)
                 instance_fulfilled  = True
             elif h==stack[-1] and r==':polarity':   # polarity gets to be on the same line as the concept
-                s += ' ' + r + ' ' + str(d)
+                s += ' ' + r
+                if alignments and (h,r,d) in self._alignments:
+                    s += '~' + self._alignments[(h,r,d)]
+                s += ' ' + d(align=align)
             else:
                 while stack and h!=stack[-1]:
                     popped = stack.pop()
                     if instance_fulfilled is False:
-                        # just a variable with no concept hanging off of it
+                        # just a variable or constant with no concept hanging off of it
                         # so we have an extra paren to get rid of
-                        s = s[:-len(str(popped))-1] + str(popped)
+                        s = s[:-len(popped(align=align))-1] + popped(align=align)
                     else:
                         s += ')'
                     instance_fulfilled = None
                 if d is not None:
-                    s += '\n' + indent*len(stack) + r + ' (' + str(d)
+                    s += '\n' + indent*len(stack) + r 
+                    if alignments and (h,r,d) in self._alignments:
+                        s += '~' + self._alignments[(h,r,d)]
+                    s += ' (' + d(align=align)
                     stack.append(d)
                     instance_fulfilled = False
         return s
 
-    __repr__ = __str__
+    def __repr__(self):
+        return self.__str__()
 
     def _analyze(self, p):
         '''Analyze the AST produced by parsimonious.'''
@@ -336,16 +401,20 @@ class AMR(DependencyGraph):
                     assert v is not None
                     if v in v2c:
                         raise AMRError('Variable has multiple concepts: '+str(v)+'\n'+self._anno)
-                    c = intern_elt(Concept(ch.text))
+                    concept_node, alignment_node = ch.children
+                    c = intern_elt(Concept(concept_node.text))
                     v2c[v] = c
                     self.add_node({'address': c, 'word': c, 'type': 'CONCEPT',
                                    'rel': ':instance-of', 'head': v, 'deps': []})
                     deps.append(c)
                     triples.append((v, ':instance-of', c))
+                    if len(alignment_node.text)>0:
+                        self._alignments[c] = alignment_node.text[1:]
                 elif t=='' and ch.children:
                     for ch2 in ch.children:
                         _part, RELpart, _part, Ypart = ch2.children
-                        rel = RELpart.text
+                        rel, relalignment = RELpart.children
+                        rel = rel.text
                         assert rel is not None
                         assert len(Ypart.children)==1
                         q = Ypart.children[0]
@@ -355,24 +424,33 @@ class AMR(DependencyGraph):
                         deps2 = []
                         if tq=='X':
                             n2, triples2, deps2 = walk(q)
-                        elif tq=='NAMEDCONST':
-                            n2 = intern_elt(AMRConstant(q.text))
-                            consts.add(n2)
-                        elif tq=='VAR':
-                            n2 = intern_elt(Var(q.text))
-                            allvars.add(n2)
-                        elif tq=='STR':
-                            n2 = intern_elt(AMRString(q.text[1:-1]))
-                            consts.add(n2)
-                        elif tq=='NUM':
-                            n2 = intern_elt(AMRNumber(q.text))
-                            consts.add(n2)
+                        else:
+                            if tq=='NAMEDCONST':
+                                qleft, qalign = q.children
+                                n2 = intern_elt(AMRConstant(qleft.text))
+                                consts.add(n2)
+                            elif tq=='VAR':
+                                qleft, qalign = q, None
+                                n2 = intern_elt(Var(qleft.text))
+                                allvars.add(n2)
+                            elif tq=='STR':
+                                quote1, qstr, quote2, qalign = q.children
+                                n2 = intern_elt(AMRString(qstr.text))
+                                consts.add(n2)
+                            elif tq=='NUM':
+                                qleft, qalign = q.children
+                                n2 = intern_elt(AMRNumber(qleft.text))
+                                consts.add(n2)
+                            if qalign and len(qalign.text)>0:
+                                self._alignments[n2] = qalign.text[1:]
                         assert n2 is not None
                         self.add_node({'address': n2, 'word': n2, 'type': tq,
                                        'rel': rel, 'head': v})
                         self.nodes[n2]['deps'].extend(deps2)
                         deps.append(n2)
                         triples.append((v, rel, n2))
+                        if len(relalignment.text)>0:
+                            self._alignments[(v, rel, n2)] = relalignment.text[1:]
                         triples.extend(triples2)
             return v, triples, deps
     
