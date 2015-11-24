@@ -571,7 +571,9 @@ expressive
                  :calendar (c2 / country :wiki "Japan"
                        :name (n2 / name :op1 "Japan"))))''',
 ''' (d / date-entity :polite +
-           :time (a / amr-unknown))'''
+           :time (a / amr-unknown))''',
+'''( o / have-01 :ARG0 o :value 2)''',
+#'''( o / have-01 :ARG0 o :value -2)'''  # causes errors if uncommented
 ]
 
 sembad_tests = [    # not a syntax error, but malformed in terms of variables
