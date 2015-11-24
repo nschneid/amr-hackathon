@@ -21,12 +21,14 @@ from pprint import pprint
 from collections import defaultdict, namedtuple, Counter, Container
 
 from parsimonious.grammar import Grammar
+from parsimonious.exceptions import ParseError
 from nltk.parse import DependencyGraph
 
 def clean_grammar_file(s):
     return re.sub('\n[ \t]+', ' ', re.sub(r'#.*','',s.replace('\t',' ').replace('`','_backtick')))
 
-with open('amr.peg') as inF:
+scriptdir = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(scriptdir, 'amr.peg')) as inF:
     grammar = Grammar(clean_grammar_file(inF.read()))
 
 
@@ -255,7 +257,10 @@ class AMR(DependencyGraph):
         self.nodes[TOP]['type'] = 'TOP'
         if anno:
             self._anno = anno
-            p = grammar.parse(anno)
+            try:
+                p = grammar.parse(anno)
+            except ParseError as e:
+                raise AMRSyntaxError('Bad parse: '+str(e))
             if p is None:
                 raise AMRSyntaxError('Well-formedness error in annotation:\n'+anno.strip())
             self._analyze(p)
