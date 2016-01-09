@@ -353,7 +353,18 @@ class AMR(DependencyGraph):
         return self.__str__(*args, **kwargs)
 
     def __str__(self, alignments=True, tokens=True, compressed=False, indent=' '*4):
-        '''Assumes triples are stored in a sensible order (reflecting how they are encountered in a valid AMR).'''
+        '''
+        Assumes triples are stored in a sensible order (reflecting how they are encountered in a valid AMR).
+
+        >>> a = AMR('(p / person :ARG0-of (h / hug-01 :ARG0 p :ARG1 p) :mod (s / strange))')
+        >>> # people who hug themselves and are strange
+        >>> print(str(a))
+        (p / person
+            :ARG0-of (h / hug-01
+                :ARG0 p
+                :ARG1 p)
+            :mod (s / strange))
+        '''
         s = ''
         stack = []
         instance_fulfilled = None
@@ -363,6 +374,7 @@ class AMR(DependencyGraph):
         if align and tokens:
             for k,align_key in align.items():
                 align[k] = align_key + '['+tokens[int(align_key.split('.')[1])]+']'
+        concept_stack_depth = {None: 0} # size of the stack when the :instance-of triple was encountered for the variable
         for h, r, d in self.triples()+[(None,None,None)]:
             if r==':top':
                 s += '(' + str(d)
@@ -370,7 +382,8 @@ class AMR(DependencyGraph):
                 instance_fulfilled = False
             elif r==':instance-of':
                 s += ' / ' + d(align=align)
-                instance_fulfilled  = True
+                instance_fulfilled = True
+                concept_stack_depth[h] = len(stack)
             elif h==stack[-1] and r==':polarity':   # polarity gets to be on the same line as the concept
                 s += ' ' + r
                 if alignments and (h,r,d) in self._alignments:
@@ -382,7 +395,7 @@ class AMR(DependencyGraph):
 
                 s += ' ' + d(align=align)
             else:
-                while stack and h!=stack[-1]:
+                while len(stack)>concept_stack_depth[h]:
                     popped = stack.pop()
                     if instance_fulfilled is False:
                         # just a variable or constant with no concept hanging off of it
