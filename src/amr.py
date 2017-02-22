@@ -472,7 +472,7 @@ class AMR(DependencyGraph):
                                 n2 = intern_elt(AMRConstant(qleft.text))
                                 consts.add(n2)
                             elif tq=='VAR':
-                                qleft, qalign = q, None
+                                qleft, qalign = q.children
                                 n2 = intern_elt(Var(qleft.text))
                                 allvars.add(n2)
                             elif tq=='STR':
