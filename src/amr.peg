@@ -13,7 +13,7 @@ STR = "\"" ~r"[^\"\s]([^\"\n\r]*[^\"\s])?" "\"" ALIGNMENT?	# quoted string liter
 CONCEPT = ~r"[A-Za-z0-9.'][A-Za-z0-9.'-]*" ALIGNMENT?	# seen in data: :li (x3 / 3) and :quant (x / 355.02) and :mod (x / friggin')
 REL = ~r":[A-Za-z][A-Za-z0-9-]*" ALIGNMENT?
 NUM = ~r"[+-]?\d+(\.\d+)?" ALIGNMENT?
-ALIGNMENT = "~" ~r"[A-Za-z0-9.]+"
+ALIGNMENT = "~" ~r"[A-Za-z0-9.,]+"
 # TODO: the regexes, especially NUM, need checking
 
 _ = ~r"([ \t]*[\n\r][ \t]*)|[ \t]+"
