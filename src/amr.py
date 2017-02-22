@@ -216,6 +216,18 @@ class AMR(DependencyGraph):
         :mode~e.0[Do] imperative~e.5[!]
         :result (s / silly-01~e.4[silly]
             :ARG1 y))
+
+    >>> a = AMR("(r / reduce-01~e.8 :ARG0 (t / treat-04~e.0 :ARG1~e.1 (c / cell-line~e.3,4 \
+                :mod (d2 / disease :name (n3 / name :op1 \"CRC\"~e.2))) :ARG2~e.5 (s / small-molecule \
+                :name (n / name :op1 \"U0126\"~e.6))) :ARG1 (l / level~e.11 :quant-of (n6 / nucleic-acid \
+                :name (n4 / name :op1 \"mRNA\"~e.10) :ARG0-of (e2 / encode-01 :ARG1 (p / protein \
+                :name (n5 / name :op1 \"serpinE2\"~e.9))))) :manner~e.7 (m / marked~e.7) \
+                :ARG0-of (i / indicate-01~e.13 :ARG1~e.14 (l2 / likely-01~e.19 \
+                :ARG1 (d / depend-01~e.20 :ARG0 (e3 / express-03~e.15 :ARG2 p~e.17) \
+                :ARG1~e.21 (a / activity-06~e.23 :ARG0 (e / enzyme \
+                :name (n2 / name :op1 \"ERK\"~e.22)))))))", \
+                "Treatment of CRC cell lines with U0126 markedly reduced serpinE2 mRNA levels , indicating that expression of serpinE2 is likely dependent of ERK activity".split())
+    >>> a
     '''
 
     def __init__(self, anno, tokens=None):
