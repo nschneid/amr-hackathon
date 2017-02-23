@@ -16,12 +16,14 @@ TODO: Include the smatch evaluation code
 @since: 2015-05-05
 '''
 from __future__ import print_function
-import os, sys, re, fileinput, json
-from pprint import pprint
-from collections import defaultdict, namedtuple, Counter, Container
 
-from parsimonious.grammar import Grammar
+import re
+from collections import defaultdict, Counter
+
 from nltk.parse import DependencyGraph
+from parsimonious.exceptions import ParseError
+from parsimonious.grammar import Grammar
+
 
 def clean_grammar_file(s):
     return re.sub('\n[ \t]+', ' ', re.sub(r'#.*','',s.replace('\t',' ').replace('`','_backtick')))
@@ -39,8 +41,8 @@ class Var(object):
         return 'Var('+self._name+')'
     def __str__(self):
         return self._name
-    def __call__(self, **kwargs):   # args are ignored, but this is present so Var objects behave like objects that can have alignments
-        return self.__str__()
+    def __call__(self, align={}, append=False):
+        return self._name+(align.get(self, '') if append else '')
     def __eq__(self, that):
         return type(that)==type(self) and self._name==that._name
     def __hash__(self):
@@ -56,7 +58,7 @@ class Concept(object):
         return self.RE_FRAME_NUM.search(self._name) is not None
     def __repr__(self):
         return 'Concept('+self._name+')'
-    def __str__(self, align={}):
+    def __str__(self, align={}, **kwargs):
         return self._name+align.get(self,'')
     def __call__(self, **kwargs):
         return self.__str__(**kwargs)
@@ -74,7 +76,7 @@ class AMRConstant(object):
         return False
     def __repr__(self):
         return 'Const('+self._value+')'
-    def __str__(self, align={}):
+    def __str__(self, align={}, **kwargs):
         return self._value+align.get(self,'')
     def __call__(self, **kwargs):
         return self.__str__(**kwargs)
@@ -84,7 +86,7 @@ class AMRConstant(object):
         return hash(repr(self))
 
 class AMRString(AMRConstant):
-    def __str__(self, align={}):
+    def __str__(self, align={}, **kwargs):
         return '"'+self._value+'"'+align.get(self,'')
     def __repr__(self):
         return '"'+self._value+'"'
@@ -145,14 +147,14 @@ class AMR(DependencyGraph):
     [(Var(TOP), ':top', Var(h)), (Var(h), ':instance-of', Concept(hug-01)),
      (Var(h), ':ARG1', Var(p)), (Var(p), ':instance-of', Concept(person)),
      (Var(p), ':ARG0-of', Var(h))]
-    >>> a.contains_cycle()
-    [Var(p), Var(h)]
+    >>> sorted(a.contains_cycle(), key=str)
+    [Var(h), Var(p)]
 
     >>> a = AMR('(h / hug-01 :ARG0 (y / you) :mode imperative \
     :ARG1 (p / person :ARG0-of (w / want-01 :ARG1 h)))')
     >>> # Hug someone who wants you to!
-    >>> a.contains_cycle()
-    [Var(w), Var(h), Var(p)]
+    >>> sorted(a.contains_cycle(), key=str)
+    [Var(h), Var(p), Var(w)]
 
     >>> a = AMR('(w / wizard    \
     :name (n / name :op1 "Albus" :op2 "Percival" :op3 "Wulfric" :op4 "Brian" :op5 "Dumbledore"))')
@@ -216,6 +218,45 @@ class AMR(DependencyGraph):
         :mode~e.0[Do] imperative~e.5[!]
         :result (s / silly-01~e.4[silly]
             :ARG1 y))
+
+    >>> a = AMR('(r / reduce-01~e.8 :ARG0 (t / treat-04~e.0 :ARG1~e.1 (c / cell-line~e.3,4 \
+                :mod (d2 / disease :name (n3 / name :op1 "CRC"~e.2))) :ARG2~e.5 (s / small-molecule \
+                :name (n / name :op1 "U0126"~e.6))) :ARG1 (l / level~e.11 :quant-of (n6 / nucleic-acid \
+                :name (n4 / name :op1 "mRNA"~e.10) :ARG0-of (e2 / encode-01 :ARG1 (p / protein \
+                :name (n5 / name :op1 "serpinE2"~e.9))))) :manner~e.7 (m / marked~e.7) \
+                :ARG0-of (i / indicate-01~e.13 :ARG1~e.14 (l2 / likely-01~e.19 \
+                :ARG1 (d / depend-01~e.20 :ARG0 (e3 / express-03~e.15 :ARG2 p~e.17) \
+                :ARG1~e.21 (a / activity-06~e.23 :ARG0 (e / enzyme \
+                :name (n2 / name :op1 "ERK"~e.22)))))))', \
+                "Treatment of CRC cell lines with U0126 markedly reduced serpinE2 mRNA levels , indicating that expression of serpinE2 is likely dependent of ERK activity".split())
+    >>> a
+    (r / reduce-01~e.8[reduced]
+        :ARG0 (t / treat-04~e.0[Treatment]
+            :ARG1~e.1[of] (c / cell-line~e.3,4[cell,lines]
+                :mod (d2 / disease
+                    :name (n3 / name
+                        :op1 "CRC"~e.2[CRC])))
+            :ARG2~e.5[with] (s / small-molecule
+                :name (n / name
+                    :op1 "U0126"~e.6[U0126])))
+        :ARG1 (l / level~e.11[levels]
+            :quant-of (n6 / nucleic-acid
+                :name (n4 / name
+                    :op1 "mRNA"~e.10[mRNA])
+                :ARG0-of (e2 / encode-01
+                    :ARG1 (p / protein
+                        :name (n5 / name
+                            :op1 "serpinE2"~e.9[serpinE2])))))
+        :manner~e.7[markedly] (m / marked~e.7[markedly])
+        :ARG0-of (i / indicate-01~e.13[indicating]
+            :ARG1~e.14[that] (l2 / likely-01~e.19[likely]
+                :ARG1 (d / depend-01~e.20[dependent]
+                    :ARG0 (e3 / express-03~e.15[expression]
+                        :ARG2 p~e.17[serpinE2])
+                    :ARG1~e.21[of] (a / activity-06~e.23[activity]
+                        :ARG0 (e / enzyme
+                            :name (n2 / name
+                                :op1 "ERK"~e.22[ERK])))))))
     '''
 
     def __init__(self, anno, tokens=None):
@@ -255,9 +296,14 @@ class AMR(DependencyGraph):
         self.nodes[TOP]['type'] = 'TOP'
         if anno:
             self._anno = anno
-            p = grammar.parse(anno)
+            msg = ''
+            try:
+                p = grammar.parse(anno)
+            except ParseError as e:
+                msg += '\n' + str(e)
+                p = None
             if p is None:
-                raise AMRSyntaxError('Well-formedness error in annotation:\n'+anno.strip())
+                raise AMRSyntaxError('Well-formedness error in annotation:\n'+anno.strip()+msg)
             self._analyze(p)
 
     def triples(self, head=None, rel=None, dep=None, normalize_inverses=False, normalize_mod=False):  # overrides superclass implementation
@@ -365,15 +411,20 @@ class AMR(DependencyGraph):
                 :ARG1 p)
             :mod (s / strange))
         '''
+        def alignment_str(align_key, tokens):
+            s = '~' + align_key
+            if tokens:  # alignment key is like "e.10" (single token offset) or "e.10,11" (multiple)
+                s += '[' + ','.join(tokens[int(woffset)] for woffset in align_key.split('.')[1].split(',')) + ']'
+            return s
+        
         s = ''
         stack = []
         instance_fulfilled = None
-        align = {k: '~'+v for k,v in self._alignments.items()} if alignments else {}
-        if tokens is True:
+        align = self._alignments if alignments else {}
+        if tokens:
             tokens = self.tokens()
-        if align and tokens:
-            for k,align_key in align.items():
-                align[k] = align_key + '['+tokens[int(align_key.split('.')[1])]+']'
+        if align:
+            align = {k: alignment_str(align_key, tokens) for k,align_key in align.items()}
         concept_stack_depth = {None: 0} # size of the stack when the :instance-of triple was encountered for the variable
         for h, r, d in self.triples()+[(None,None,None)]:
             if r==':top':
@@ -386,13 +437,9 @@ class AMR(DependencyGraph):
                 concept_stack_depth[h] = len(stack)
             elif h==stack[-1] and r==':polarity':   # polarity gets to be on the same line as the concept
                 s += ' ' + r
-                if alignments and (h,r,d) in self._alignments:
-                    align_key = self._alignments[(h,r,d)]
-                    s += '~' + align_key
-                    if tokens:  # assumption: one token per alignment key
-                        woffset = int(align_key.split('.')[1])
-                        s += '['+tokens[woffset]+']'
-
+                align_key = self._alignments.get((h,r,d))
+                if alignments and align_key is not None:
+                    s += alignment_str(align_key, tokens)
                 s += ' ' + d(align=align)
             else:
                 while len(stack)>concept_stack_depth[h]:
@@ -400,18 +447,15 @@ class AMR(DependencyGraph):
                     if instance_fulfilled is False:
                         # just a variable or constant with no concept hanging off of it
                         # so we have an extra paren to get rid of
-                        s = s[:-len(popped(align=align))-1] + popped(align=align)
+                        s = s[:-len(popped(align=align))-1] + popped(align=align, append=not instance_fulfilled)
                     else:
                         s += ')'
                     instance_fulfilled = None
                 if d is not None:
                     s += '\n' + indent*len(stack) + r
-                    if alignments and (h,r,d) in self._alignments:
-                        align_key = self._alignments[(h,r,d)]
-                        s += '~' + align_key
-                        if tokens:  # assumption: one token per alignment key
-                            woffset = int(align_key.split('.')[1])
-                            s += '['+tokens[woffset]+']'
+                    align_key = self._alignments.get((h,r,d))
+                    if alignments and align_key is not None:
+                        s += alignment_str(align_key, tokens)
                     s += ' (' + d(align=align)
                     stack.append(d)
                     instance_fulfilled = False
@@ -437,6 +481,12 @@ class AMR(DependencyGraph):
             for ch in n.children:
                 t = ch.expr_name
                 if t=='VAR':
+                    var_node, alignment_node = ch.children
+                    v = intern_elt(Var(var_node.text))
+                    allvars.add(v)
+                    if alignment_node.text:
+                        self._alignments[v] = alignment_node.text[1:]
+                elif t=='BAREVAR':
                     v = intern_elt(Var(ch.text))
                     allvars.add(v)
                 elif t=='CONCEPT':
@@ -472,8 +522,12 @@ class AMR(DependencyGraph):
                                 n2 = intern_elt(AMRConstant(qleft.text))
                                 consts.add(n2)
                             elif tq=='VAR':
-                                qleft, qalign = q, None
+                                qleft, qalign = q.children
                                 n2 = intern_elt(Var(qleft.text))
+                                allvars.add(n2)
+                            elif tq=='BAREVAR':
+                                qalign = None
+                                n2 = intern_elt(Var(q.text))
                                 allvars.add(n2)
                             elif tq=='STR':
                                 quote1, qstr, quote2, qalign = q.children
@@ -523,6 +577,7 @@ good_tests = [
 '''(h / hot :mode expressive)''',
 '''(h / hot :mode "expressive")''',
 '''(h / hot :domain h)''',
+'''(h / hot :domain h~e.0)''',
 '''  (  h  /  hot   :mode  expressive  )   ''',
 '''  (  h
 /
@@ -576,6 +631,7 @@ sembad_tests = [    # not a syntax error, but malformed in terms of variables
 
 bad_tests = [
 '''h / hot :mode expressive''',
+'''(h~e.0 / hot :domain h)''',
 '''(hot :mode expressive)''',
 '''(h/hot :mode expressive)''',
 '''(h / hot :mode )''',
@@ -606,17 +662,17 @@ x''',
 def test():
     for good in good_tests:
         try:
-            a = AMR(good)
+            AMR(good)
         except AMRSyntaxError:
             print('Should be valid!')
-            print(sembad)
+            print(good)
         except AMRError:
             print('Should be valid!')
-            print(sembad)
+            print(good)
 
     for sembad in sembad_tests:
         try:
-            a = AMR(sembad)
+            AMR(sembad)
         except AMRSyntaxError:
             print('Parse should work!')
             print(sembad)
@@ -628,7 +684,7 @@ def test():
 
     for bad in bad_tests:
         try:
-            a = AMR(bad)
+            AMR(bad)
         except AMRSyntaxError:
             pass
         else:
