@@ -486,6 +486,9 @@ class AMR(DependencyGraph):
                     allvars.add(v)
                     if alignment_node.text:
                         self._alignments[v] = alignment_node.text[1:]
+                elif t=='BAREVAR':
+                    v = intern_elt(Var(ch.text))
+                    allvars.add(v)
                 elif t=='CONCEPT':
                     assert v is not None
                     if v in v2c:
@@ -521,6 +524,10 @@ class AMR(DependencyGraph):
                             elif tq=='VAR':
                                 qleft, qalign = q.children
                                 n2 = intern_elt(Var(qleft.text))
+                                allvars.add(n2)
+                            elif tq=='BAREVAR':
+                                qalign = None
+                                n2 = intern_elt(Var(q.text))
                                 allvars.add(n2)
                             elif tq=='STR':
                                 quote1, qstr, quote2, qalign = q.children

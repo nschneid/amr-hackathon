@@ -5,9 +5,10 @@
 
 ALL = ~r"\s*" X ~r"\s*$"
 
-X = "(" ` VAR _ "/" _ CONCEPT (_ REL _ Y)* ` ")"
+X = "(" ` BAREVAR _ "/" _ CONCEPT (_ REL _ Y)* ` ")"
 Y = X / NAMEDCONST / VAR / STR / NUM
-VAR = ~r"[a-z]+[0-9]*" ALIGNMENT?
+VAR = BAREVAR ALIGNMENT?
+BAREVAR = ~r"[a-z]+[0-9]*"
 NAMEDCONST = ~r"[a-z]{2,}\b|[+-](?!\d)" ALIGNMENT? # + and - must not followed by a number, and other named constants must have at least 2 letters and be followed by a word boundary (to distinguish from variable names)
 STR = "\"" ~r"[^\"\s]([^\"\n\r]*[^\"\s])?" "\"" ALIGNMENT?	# quoted string literal. nonempty; may not start or end with whitespace
 CONCEPT = ~r"[A-Za-z0-9.'][A-Za-z0-9.'-]*" ALIGNMENT?	# seen in data: :li (x3 / 3) and :quant (x / 355.02) and :mod (x / friggin')
