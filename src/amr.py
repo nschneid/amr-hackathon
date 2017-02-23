@@ -41,8 +41,8 @@ class Var(object):
         return 'Var('+self._name+')'
     def __str__(self):
         return self._name
-    def __call__(self, **kwargs):   # args are ignored, but this is present so Var objects behave like objects that can have alignments
-        return self.__str__()
+    def __call__(self, align={}, append=False):
+        return self._name+(align.get(self, '') if append else '')
     def __eq__(self, that):
         return type(that)==type(self) and self._name==that._name
     def __hash__(self):
@@ -58,7 +58,7 @@ class Concept(object):
         return self.RE_FRAME_NUM.search(self._name) is not None
     def __repr__(self):
         return 'Concept('+self._name+')'
-    def __str__(self, align={}):
+    def __str__(self, align={}, **kwargs):
         return self._name+align.get(self,'')
     def __call__(self, **kwargs):
         return self.__str__(**kwargs)
@@ -76,7 +76,7 @@ class AMRConstant(object):
         return False
     def __repr__(self):
         return 'Const('+self._value+')'
-    def __str__(self, align={}):
+    def __str__(self, align={}, **kwargs):
         return self._value+align.get(self,'')
     def __call__(self, **kwargs):
         return self.__str__(**kwargs)
@@ -86,7 +86,7 @@ class AMRConstant(object):
         return hash(repr(self))
 
 class AMRString(AMRConstant):
-    def __str__(self, align={}):
+    def __str__(self, align={}, **kwargs):
         return '"'+self._value+'"'+align.get(self,'')
     def __repr__(self):
         return '"'+self._value+'"'
@@ -448,7 +448,7 @@ class AMR(DependencyGraph):
                     if instance_fulfilled is False:
                         # just a variable or constant with no concept hanging off of it
                         # so we have an extra paren to get rid of
-                        s = s[:-len(popped(align=align))-1] + popped(align=align)
+                        s = s[:-len(popped(align=align))-1] + popped(align=align, append=not instance_fulfilled)
                     else:
                         s += ')'
                     instance_fulfilled = None
@@ -482,8 +482,11 @@ class AMR(DependencyGraph):
             for ch in n.children:
                 t = ch.expr_name
                 if t=='VAR':
-                    v = intern_elt(Var(ch.text))
+                    var_node, alignment_node = ch.children
+                    v = intern_elt(Var(var_node.text))
                     allvars.add(v)
+                    if alignment_node.text:
+                        self._alignments[v] = alignment_node.text[1:]
                 elif t=='CONCEPT':
                     assert v is not None
                     if v in v2c:
