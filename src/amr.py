@@ -365,6 +365,12 @@ class AMR(DependencyGraph):
                 :ARG1 p)
             :mod (s / strange))
         '''
+        def alignment_str(align_key, tokens):
+            s = '~' + align_key
+            if tokens:  # alignment key is like "e.10" (single token offset) or "e.10,11" (multiple)
+                s += '[' + ','.join(tokens[int(woffset)] for woffset in align_key.split('.')[1].split(',')) + ']'
+            return s
+        
         s = ''
         stack = []
         instance_fulfilled = None
@@ -373,7 +379,7 @@ class AMR(DependencyGraph):
             tokens = self.tokens()
         if align and tokens:
             for k,align_key in align.items():
-                align[k] = align_key + '['+tokens[int(align_key.split('.')[1])]+']'
+                align[k] = alignment_str(align_key, tokens)
         concept_stack_depth = {None: 0} # size of the stack when the :instance-of triple was encountered for the variable
         for h, r, d in self.triples()+[(None,None,None)]:
             if r==':top':
@@ -388,11 +394,7 @@ class AMR(DependencyGraph):
                 s += ' ' + r
                 if alignments and (h,r,d) in self._alignments:
                     align_key = self._alignments[(h,r,d)]
-                    s += '~' + align_key
-                    if tokens:  # assumption: one token per alignment key
-                        woffset = int(align_key.split('.')[1])
-                        s += '['+tokens[woffset]+']'
-
+                    s += alignment_str(align_key, tokens)
                 s += ' ' + d(align=align)
             else:
                 while len(stack)>concept_stack_depth[h]:
@@ -408,10 +410,7 @@ class AMR(DependencyGraph):
                     s += '\n' + indent*len(stack) + r
                     if alignments and (h,r,d) in self._alignments:
                         align_key = self._alignments[(h,r,d)]
-                        s += '~' + align_key
-                        if tokens:  # assumption: one token per alignment key
-                            woffset = int(align_key.split('.')[1])
-                            s += '['+tokens[woffset]+']'
+                        s += alignment_str(align_key, tokens)
                     s += ' (' + d(align=align)
                     stack.append(d)
                     instance_fulfilled = False
