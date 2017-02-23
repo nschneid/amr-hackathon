@@ -147,14 +147,14 @@ class AMR(DependencyGraph):
     [(Var(TOP), ':top', Var(h)), (Var(h), ':instance-of', Concept(hug-01)),
      (Var(h), ':ARG1', Var(p)), (Var(p), ':instance-of', Concept(person)),
      (Var(p), ':ARG0-of', Var(h))]
-    >>> a.contains_cycle()
-    [Var(p), Var(h)]
+    >>> sorted(a.contains_cycle(), key=str)
+    [Var(h), Var(p)]
 
     >>> a = AMR('(h / hug-01 :ARG0 (y / you) :mode imperative \
     :ARG1 (p / person :ARG0-of (w / want-01 :ARG1 h)))')
     >>> # Hug someone who wants you to!
-    >>> a.contains_cycle()
-    [Var(w), Var(h), Var(p)]
+    >>> sorted(a.contains_cycle(), key=str)
+    [Var(h), Var(p), Var(w)]
 
     >>> a = AMR('(w / wizard    \
     :name (n / name :op1 "Albus" :op2 "Percival" :op3 "Wulfric" :op4 "Brian" :op5 "Dumbledore"))')
