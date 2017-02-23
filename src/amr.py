@@ -20,6 +20,7 @@ import os, sys, re, fileinput, json
 from pprint import pprint
 from collections import defaultdict, namedtuple, Counter, Container
 
+from parsimonious.exceptions import ParseError
 from parsimonious.grammar import Grammar
 from nltk.parse import DependencyGraph
 
@@ -267,9 +268,14 @@ class AMR(DependencyGraph):
         self.nodes[TOP]['type'] = 'TOP'
         if anno:
             self._anno = anno
-            p = grammar.parse(anno)
+            msg = ''
+            try:
+                p = grammar.parse(anno)
+            except ParseError as e:
+                msg += '\n' + str(e)
+                p = None
             if p is None:
-                raise AMRSyntaxError('Well-formedness error in annotation:\n'+anno.strip())
+                raise AMRSyntaxError('Well-formedness error in annotation:\n'+anno.strip()+msg)
             self._analyze(p)
 
     def triples(self, head=None, rel=None, dep=None, normalize_inverses=False, normalize_mod=False):  # overrides superclass implementation
