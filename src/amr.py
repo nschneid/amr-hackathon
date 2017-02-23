@@ -577,6 +577,7 @@ good_tests = [
 '''(h / hot :mode expressive)''',
 '''(h / hot :mode "expressive")''',
 '''(h / hot :domain h)''',
+'''(h / hot :domain h~e.0)''',
 '''  (  h  /  hot   :mode  expressive  )   ''',
 '''  (  h
 /
@@ -630,6 +631,7 @@ sembad_tests = [    # not a syntax error, but malformed in terms of variables
 
 bad_tests = [
 '''h / hot :mode expressive''',
+'''(h~e.0 / hot :domain h)''',
 '''(hot :mode expressive)''',
 '''(h/hot :mode expressive)''',
 '''(h / hot :mode )''',
