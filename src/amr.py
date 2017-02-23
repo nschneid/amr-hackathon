@@ -420,12 +420,11 @@ class AMR(DependencyGraph):
         s = ''
         stack = []
         instance_fulfilled = None
-        align = dict(self._alignments) if alignments else {}
-        if tokens is True:
+        align = self._alignments if alignments else {}
+        if tokens:
             tokens = self.tokens()
-        if align and tokens:
-            for k,align_key in align.items():
-                align[k] = alignment_str(align_key, tokens)
+        if align:
+            align = {k: alignment_str(align_key, tokens) for k,align_key in align.items()}
         concept_stack_depth = {None: 0} # size of the stack when the :instance-of triple was encountered for the variable
         for h, r, d in self.triples()+[(None,None,None)]:
             if r==':top':
@@ -438,8 +437,8 @@ class AMR(DependencyGraph):
                 concept_stack_depth[h] = len(stack)
             elif h==stack[-1] and r==':polarity':   # polarity gets to be on the same line as the concept
                 s += ' ' + r
-                if alignments and (h,r,d) in self._alignments:
-                    align_key = self._alignments[(h,r,d)]
+                align_key = self._alignments.get((h,r,d))
+                if alignments and align_key is not None:
                     s += alignment_str(align_key, tokens)
                 s += ' ' + d(align=align)
             else:
@@ -454,8 +453,8 @@ class AMR(DependencyGraph):
                     instance_fulfilled = None
                 if d is not None:
                     s += '\n' + indent*len(stack) + r
-                    if alignments and (h,r,d) in self._alignments:
-                        align_key = self._alignments[(h,r,d)]
+                    align_key = self._alignments.get((h,r,d))
+                    if alignments and align_key is not None:
                         s += alignment_str(align_key, tokens)
                     s += ' (' + d(align=align)
                     stack.append(d)
