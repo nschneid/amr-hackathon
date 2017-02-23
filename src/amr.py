@@ -252,7 +252,7 @@ class AMR(DependencyGraph):
             :ARG1~e.14[that] (l2 / likely-01~e.19[likely]
                 :ARG1 (d / depend-01~e.20[dependent]
                     :ARG0 (e3 / express-03~e.15[expression]
-                        :ARG2 p)
+                        :ARG2 p~e.17[serpinE2])
                     :ARG1~e.21[of] (a / activity-06~e.23[activity]
                         :ARG0 (e / enzyme
                             :name (n2 / name
