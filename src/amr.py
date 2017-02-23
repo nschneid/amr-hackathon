@@ -420,7 +420,7 @@ class AMR(DependencyGraph):
         s = ''
         stack = []
         instance_fulfilled = None
-        align = {k: '~'+v for k,v in self._alignments.items()} if alignments else {}
+        align = dict(self._alignments) if alignments else {}
         if tokens is True:
             tokens = self.tokens()
         if align and tokens:
