@@ -16,13 +16,14 @@ TODO: Include the smatch evaluation code
 @since: 2015-05-05
 '''
 from __future__ import print_function
-import os, sys, re, fileinput, json
-from pprint import pprint
-from collections import defaultdict, namedtuple, Counter, Container
 
+import re
+from collections import defaultdict, Counter
+
+from nltk.parse import DependencyGraph
 from parsimonious.exceptions import ParseError
 from parsimonious.grammar import Grammar
-from nltk.parse import DependencyGraph
+
 
 def clean_grammar_file(s):
     return re.sub('\n[ \t]+', ' ', re.sub(r'#.*','',s.replace('\t',' ').replace('`','_backtick')))
