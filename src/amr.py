@@ -653,17 +653,17 @@ x''',
 def test():
     for good in good_tests:
         try:
-            a = AMR(good)
+            AMR(good)
         except AMRSyntaxError:
             print('Should be valid!')
-            print(sembad)
+            print(good)
         except AMRError:
             print('Should be valid!')
-            print(sembad)
+            print(good)
 
     for sembad in sembad_tests:
         try:
-            a = AMR(sembad)
+            AMR(sembad)
         except AMRSyntaxError:
             print('Parse should work!')
             print(sembad)
@@ -675,7 +675,7 @@ def test():
 
     for bad in bad_tests:
         try:
-            a = AMR(bad)
+            AMR(bad)
         except AMRSyntaxError:
             pass
         else:
