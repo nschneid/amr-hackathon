@@ -219,6 +219,18 @@ class AMR(DependencyGraph):
         :result (s / silly-01~e.4[silly]
             :ARG1 y))
 
+    >>> a = AMR("(h / hug-01~e.3 :ARG0 (a / and~e.1 :op1 (y / you~e.0) :op2 (i / i~e.2)) \
+                 :ARG1 (a2 / and~e.5 :op1 (s / she~e.4) :op2 (h2 / he~e.6)))", \
+                "You and I hug her and him".split())
+    >>> a
+    (h / hug-01~e.3[hug]
+        :ARG0 (a / and~e.1[and]
+            :op1 (y / you~e.0[You])
+            :op2 (i / i~e.2[I]))
+        :ARG1 (a2 / and~e.5[and]
+            :op1 (s / she~e.4[her])
+            :op2 (h2 / he~e.6[him])))
+
     >>> a = AMR('(r / reduce-01~e.8 :ARG0 (t / treat-04~e.0 :ARG1~e.1 (c / cell-line~e.3,4 \
                 :mod (d2 / disease :name (n3 / name :op1 "CRC"~e.2))) :ARG2~e.5 (s / small-molecule \
                 :name (n / name :op1 "U0126"~e.6))) :ARG1 (l / level~e.11 :quant-of (n6 / nucleic-acid \
