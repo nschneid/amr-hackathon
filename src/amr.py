@@ -231,6 +231,23 @@ class AMR(DependencyGraph):
             :op1 (s / she~e.4[her])
             :op2 (h2 / he~e.6[him])))
 
+    >>> a = AMR("(a / and~e.5 :op1 (e / eat-01~e.2 :ARG0 (c / cat~e.1,8 :poss~e.0,8 (i / i~e.0,8)) \
+                 :time~e.3 (d / dawn~e.4)) \
+                 :op2 (e2 / eat-01~e.2 :ARG0 (c2 / cat~e.1,6 :poss~e.6 (y / you~e.6)) \
+                 :time~e.7 (a2 / after~e.7 :op1 e~e.9)))", \
+                "my cat eats at dawn and yours after mine does".split())
+    >>> a
+    (a / and~e.5[and]
+        :op1 (e / eat-01~e.2[eats]
+            :ARG0 (c / cat~e.1,8[cat,mine]
+                :poss~e.0,8[my,mine] (i / i~e.0,8[my,mine]))
+            :time~e.3[at] (d / dawn~e.4[dawn]))
+        :op2 (e2 / eat-01~e.2[eats]
+            :ARG0 (c2 / cat~e.1,6[cat,yours]
+                :poss~e.6[yours] (y / you~e.6[yours]))
+            :time~e.7[after] (a2 / after~e.7[after]
+                :op1 e~e.9[does])))
+
     >>> a = AMR('(r / reduce-01~e.8 :ARG0 (t / treat-04~e.0 :ARG1~e.1 (c / cell-line~e.3,4 \
                 :mod (d2 / disease :name (n3 / name :op1 "CRC"~e.2))) :ARG2~e.5 (s / small-molecule \
                 :name (n / name :op1 "U0126"~e.6))) :ARG1 (l / level~e.11 :quant-of (n6 / nucleic-acid \
