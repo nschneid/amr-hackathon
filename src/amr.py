@@ -187,12 +187,20 @@ class AMR(DependencyGraph):
                     :op1 "arizona"~e.8))
             :manner~e.0 (g / glance-01~e.2
                 :arg0 i)))
-    >>> a.alignments()  #doctest:+NORMALIZE_WHITESPACE
-    {(Var(d), ':manner', Var(g)): 'e.0', Concept(glance-01): 'e.2',
-    "china": 'e.6', (Var(s), ':wiki', "arizona"): 'e.7', Concept(i): 'e.3',
-    "arizona": 'e.8', (Var(p), ':domain', Var(d)): 'e.1',
-    Concept(distinguish-01): 'e.5', Concept(possible): 'e.4',
-    (Var(c), ':wiki', "china"): 'e.7'}
+    >>> sorted(a.alignments().items(), key=str)  #doctest:+NORMALIZE_WHITESPACE
+    [((Var(c), ':wiki', "china"), 'e.6'),
+     ((Var(d), ':instance-of', Concept(distinguish-01)), 'e.5'),
+     ((Var(g), ':instance-of', Concept(glance-01)), 'e.2'),
+     ((Var(i), ':instance-of', Concept(i)), 'e.3'),
+     ((Var(n), ':op1', "china"), 'e.6'),
+     ((Var(n2), ':op1', "arizona"), 'e.8'),
+     ((Var(p), ':instance-of', Concept(possible)), 'e.4'),
+     ((Var(s), ':wiki', "arizona"), 'e.8')]
+    >>> sorted(a.role_alignments().items(), key=str)  #doctest:+NORMALIZE_WHITESPACE
+    [((Var(c), ':wiki', "china"), 'e.7'),
+     ((Var(d), ':manner', Var(g)), 'e.0'),
+     ((Var(p), ':domain', Var(d)), 'e.1'),
+     ((Var(s), ':wiki', "arizona"), 'e.7')]
     >>> print(a(alignments=False))
     (p / possible
         :domain (d / distinguish-01
