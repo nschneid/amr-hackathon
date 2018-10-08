@@ -1,3 +1,7 @@
+
+| This code is experimental and no longer supported; it may fail on some valid AMRs. The more recent library https://github.com/goodmami/penman/ is recommended instead. |
+| --- |
+
 amr.py provides an API for reading AMRs, i.e., semantic annotations for sentences 
 in the [Abstract Meaning Representation](http://amr.isi.edu/) that have been 
 specified using the PENMAN notation. The `AMR` class serves as a data structure 
